@@ -47,16 +47,15 @@ get_main_position_name <- function(governors) {
   # STEP 3 ----
     # joins the output from step 2 with the positions data
     # optionally keeps select columns if a vector of names is provided
-get_clean_labeled_data <- function(governors, columns = '') {
+get_clean_labeled_data <- function(governors, columns = NA) {
   clean_labeled_data <- governors %>%
     left_join(positions %>%
                 select(position = 'Title/Position',
                        classification = Classification),
               by = 'position')
-  if (length(columns) > 0) {
+  if (!is.na(columns))
     clean_labeled_data <- clean_labeled_data %>%
       select(row, all_of(columns), position, position_order, classification)
-  }
   return(clean_labeled_data)
 }
 
