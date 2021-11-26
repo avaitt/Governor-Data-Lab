@@ -53,9 +53,10 @@ get_clean_labeled_data <- function(governors, columns = '') {
                 select(position = 'Title/Position',
                        classification = Classification),
               by = 'position')
-  if (length(columns) > 0)
+  if (length(columns) > 0) {
     clean_labeled_data <- clean_labeled_data %>%
       select(row, all_of(columns), position, position_order, classification)
+  }
   return(clean_labeled_data)
 }
 
