@@ -1,0 +1,259 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+damascus_data <- read.csv('Damascus-OttomanGovernors - Governors.csv', stringsAsFactors=T)
+head(damascus_data)
+```
+
+```{r}
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+```
+
+```{r}
+xlabels <- substrRight(as.character(damascus_data[1:170,]$Start.Date), 4)
+xlabels
+```
+
+
+```{r}
+## highlight region data
+start <- 1520
+end <- 1566
+suleiman <- data.frame(start=start, end=end, group=seq_along(start))
+```
+
+```{r}
+start <- 1789
+end <- 1807
+selim_iii <- data.frame(start=start, end=end, group=seq_along(start))
+```
+
+```{r}
+start <- 1623
+end <- 1640
+murad_iv <- data.frame(start=start, end=end, group=seq_along(start))
+```
+
+```{r}
+library(stringr)
+library(ggplot2)
+
+every_nth = function(n) {
+  return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+}
+
+
+a<-ggplot(data=damascus_data[1:170,], aes(x=as.numeric(substrRight(as.character(Start.Date), 4)), y=scale(Tenure..Years.))) +
+  geom_bar(stat="identity") + 
+  #scale_x_discrete(breaks = every_nth(n = 70)) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Z Score') + 
+  geom_rect(data=suleiman, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="green", alpha=0.3) + 
+  geom_rect(data=selim_iii, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="red", alpha=0.3) +  
+  geom_rect(data=murad_iv, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="orange", alpha=0.3) +
+  ggtitle("Z Scores of Governor Tenures in Damascus") + 
+  theme(plot.title = element_text(size = 11, face = "bold"))
+a
+```
+
+```{r}
+algiers_data <- read.csv('Algiers-Governors - Variability.csv', stringsAsFactors=T)
+head(algiers_data)
+```
+
+
+```{r}
+xlabels <- substrRight(as.character(algiers_data[1:86,]$Start.Date), 4)
+xlabels
+```
+
+```{r}
+library(stringr)
+library(ggplot2)
+
+every_nth = function(n) {
+  return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+}
+
+
+b<-ggplot(data=algiers_data[1:86,], aes(x=as.numeric(substrRight(as.character(Start.Date), 4)), y=scale(Years.in.Office))) +
+  geom_bar(stat="identity") + 
+  #scale_x_discrete(breaks = every_nth(n = 37)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Z Score') + 
+  geom_rect(data=suleiman, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="green", alpha=0.3) + 
+  geom_rect(data=selim_iii, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="red", alpha=0.3) +  
+  geom_rect(data=murad_iv, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="orange", alpha=0.3) +
+  
+  ggtitle("Z Scores of Governor Tenures in Algeria") + 
+  theme(plot.title = element_text(size = 11, face = "bold"))
+b
+```
+
+
+```{r}
+egypt_data <- read.csv('Cairo-OttomanGovernors - Chron-GovData.csv', stringsAsFactors=T)
+tail(egypt_data)
+```
+
+
+
+```{r}
+xlabels <- substrRight(as.character(egypt_data[1:172,]$Start), 4)
+xlabels
+```
+
+
+```{r}
+library(stringr)
+library(ggplot2)
+
+every_nth = function(n) {
+  return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+}
+
+# Create a named character vector that relates factor levels to colors.
+grays = c(alive="gray85", dead="gray65", infected="gray38", sod.dead="black")
+
+c<-ggplot(data=egypt_data[1:171,], aes(x=as.numeric(substrRight(as.character(egypt_data[1:171,]$Start), 4)), y=scale(Tenure..years.))) +
+  geom_bar(stat="identity") + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Z Score') + 
+  geom_rect(data=suleiman, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="green", alpha=0.3) + 
+  geom_rect(data=selim_iii, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="red", alpha=0.3) +  
+  geom_rect(data=murad_iv, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=min(dat$value),
+                ymax=max(dat$value), group=group), color="transparent", fill="orange", alpha=0.3) +
+  ggtitle("Z Scores of Governor Tenures in Egypt") +
+  theme(plot.title = element_text(size = 11, face = "bold")) 
+  
+c
+```
+
+
+```{r fig.width=12, fig.height=7}
+final <- ggarrange(a,b,c`, ncol = 1, nrow = 3, legend = "bottom")
+final
+```
+
+
+
+
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+
+```
+
+
+# Damascus
+
+
+```{r}
+subsetA <- damascus_data %>%  filter(Fate != "" & Fate != 'Unknown')
+subsetA$Fate <- paste0(subsetA$Fate, ";")
+
+#label encode fates
+
+library(stringi)
+subsetA$Fate <- stri_match_first_regex(subsetA$Fate, "(.*?)\\;")[,2]
+subsetA <- subsetA %>% mutate_if(is.character, str_trim)
+#subsetC %>% shapiro_test(Tenure..Years.)
+
+library(dplyr)
+subsetA <- subsetA %>%
+  rename(Ethnicity = O.T.NT)
+
+subsetA <- subsetA %>% 
+  mutate(Fate = ifelse(as.character(Fate) == "Deposed", "Dismissed", as.character(Fate)))
+```
+
+
+
+```{r fig.width=7, fig.height=7}
+library(vcd)
+#png('mosaic_plot.png')
+damascus <- mosaic(~ Fate + Ethnicity, 
+       data = subsetA,
+       zero_size = 1.1,
+       shade = TRUE,
+       highlighting = "Fate",highlighting_fill = c('#F8766D', '#A3A500', '#00BF7D'),
+       spacing = spacing_equal(sp = unit(0.8, "lines")),
+       gp_varnames = gpar(fontsize = 12, fontface = 2),
+       gp_labels = gpar(fontsize = 12))
+#dev.off()
+```
+
+
+# Egypt
+
+
+```{r}
+subsetB <- egypt_data %>% filter(Simplified_Final_Fate != "" & Simplified_Final_Fate != 'Unknown') %>% select(-c(Fate)) 
+subsetB <- subsetB %>%
+  rename(Fate = Simplified_Final_Fate)
+
+library(dplyr)
+subsetB <- subsetB %>% select(-c(Ethnicity)) %>%
+  rename(Ethnicity = Ottoman.Turkish.Non.Turkish)
+```
+
+
+```{r}
+subsetB <- subsetB %>% 
+  mutate(Fate = ifelse(as.character(Fate) == "Willful violent removal ", "Willful violent removal", as.character(Fate)))
+
+subsetB <- subsetB %>% 
+  mutate(Fate = ifelse(as.character(Fate) == "Non-violent fate/Willful violent removal", "Willful violent removal", as.character(Fate)))
+```
+
+
+```{r}
+unique(subsetB$Fate)
+```
+
+```{r fig.width=7, fig.height=7}
+library(vcd)
+#png('mosaic_plot.png')
+egypt <- mosaic(~ Fate + Ethnicity, 
+       data = subsetB,
+       zero_size = 1.1,
+       shade = TRUE,
+       highlighting = "Fate", highlighting_fill = c('#F8766D', '#A3A500', '#00BF7D'),
+       spacing = spacing_equal(sp = unit(0.8, "lines")),
+       gp_varnames = gpar(fontsize = 12, fontface = 2),
+       gp_labels = gpar(fontsize = 12))
+egypt
+#dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
