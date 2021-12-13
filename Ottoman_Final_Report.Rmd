@@ -1,0 +1,593 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+always_allow_html: yes
+---
+
+```{r, echo=FALSE, message=FALSE, results='hide', warning=FALSE}
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(stats)
+library(DT)
+library(nortest)
+library(corrplot)
+library(ggplot2) ## version 3.3.0
+library(ggmosaic)  ## version 0.2.2
+library(kableExtra)
+library(dplyr)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+```
+
+
+```{r, echo=FALSE}
+damascus_data <- read.csv('Damascus-OttomanGovernors - Governors.csv', stringsAsFactors=T)
+```
+
+```{r, echo=FALSE}
+substrRight <- function(x, n){
+  substr(x, nchar(x)-n+1, nchar(x))
+}
+```
+
+```{r, echo=FALSE}
+xlabels <- substrRight(as.character(damascus_data[1:170,]$Start.Date), 4)
+```
+
+```{r, echo=FALSE}
+## highlight region data
+start <- 1520
+end <- 1566
+suleiman <- data.frame(start=start, end=end, group=seq_along(start))
+```
+
+```{r, echo=FALSE}
+start <- 1789
+end <- 1807
+selim_iii <- data.frame(start=start, end=end, group=seq_along(start))
+```
+
+```{r, echo=FALSE}
+start <- 1623
+end <- 1640
+murad_iv <- data.frame(start=start, end=end, group=seq_along(start))
+```
+
+```{r, echo=FALSE, warning=FALSE}
+every_nth = function(n) {
+  return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+}
+
+
+a<-ggplot(data=damascus_data[1:170,], aes(x=as.numeric(substrRight(as.character(Start.Date), 4))+10, y=scale(Tenure..Years.))) +
+  geom_bar(stat="identity") + 
+  #scale_x_discrete(breaks = every_nth(n = 70)) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Z Score') + 
+  geom_rect(data=suleiman, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="green", alpha=0.3) + 
+  geom_rect(data=selim_iii, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="red", alpha=0.3) +
+  geom_rect(data=murad_iv, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="orange", alpha=0.3) +
+  ylim(-2, 6)+
+  ggtitle("Z Scores of Governor Tenures in Syria") + 
+  theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          text = element_text(size=14))+
+  theme(plot.title = element_text(size = 12, face = "bold"))
+```
+
+```{r, echo=FALSE}
+algiers_data <- read.csv('Algiers-Governors - Variability.csv', stringsAsFactors=T)
+```
+
+```{r, echo=FALSE}
+xlabels <- substrRight(as.character(algiers_data[1:86,]$Start.Date), 4)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+every_nth = function(n) {
+  return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+}
+
+
+b<-ggplot(data=algiers_data[1:86,], aes(x=as.numeric(substrRight(as.character(Start.Date), 4))+10, y=scale(Years.in.Office))) +
+  geom_bar(stat="identity") + 
+  #scale_x_discrete(breaks = every_nth(n = 37)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Z Score') + 
+  geom_rect(data=suleiman, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="green", alpha=0.3) + 
+  geom_rect(data=selim_iii, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="red", alpha=0.3) +  
+  geom_rect(data=murad_iv, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="orange", alpha=0.3) +
+  ylim(-2, 6)+
+  ggtitle("Z Scores of Governor Tenures in Algeria") + 
+   theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+         text = element_text(size=14))+
+  theme(plot.title = element_text(size = 12, face = "bold"))
+```
+
+```{r, echo=FALSE}
+egypt_data <- read.csv('Cairo-OttomanGovernors - Chron-GovData.csv', stringsAsFactors=T)
+```
+
+```{r, echo=FALSE}
+xlabels <- substrRight(as.character(egypt_data[1:172,]$Start), 4)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+every_nth = function(n) {
+  return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+}
+
+# Create a named character vector that relates factor levels to colors.
+grays = c(alive="gray85", dead="gray65", infected="gray38", sod.dead="black")
+
+c<-ggplot(data=egypt_data[1:171,], aes(x=as.numeric(substrRight(as.character(egypt_data[1:171,]$Start), 4))+10, y=scale(Tenure..years.))) +
+  geom_bar(stat="identity") + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Z Score') + 
+  geom_rect(data=suleiman, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="green", alpha=0.3) + 
+  geom_rect(data=selim_iii, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="red", alpha=0.3) +  
+  geom_rect(data=murad_iv, inherit.aes=FALSE, aes(xmin=start, xmax=end, ymin=-Inf,
+                ymax=Inf, group=group), color="transparent", fill="orange", alpha=0.3) +
+  ylim(-2, 6)+
+  ggtitle("Z Scores of Governor Tenures in Egypt") +
+  theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+        text = element_text(size=14))+
+  theme(plot.title = element_text(size = 12, face = "bold")) + 
+  coord_cartesian(clip = "off")
+```
+
+```{r, echo=FALSE}
+legend <- ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species))+
+  geom_point(alpha = 0.3)+
+  lims(x = c(0,0), y = c(0,0))+
+  theme_void()+
+  theme(legend.position = c(0.5,0.5),
+        legend.key.size = unit(1, "cm"),
+        legend.text = element_text(size =  12),
+        legend.title = element_text(size = 15, face = "bold"))+
+  guides(colour = guide_legend(override.aes = list(size=8))) + 
+  theme(legend.position="top")+
+  labs(color = 'Sultan')+
+  scale_color_manual(labels = c("Suleiman I", "Murad IV", "Selim III"), values = c("green", "orange","red")) 
+```
+
+```{r fig.width=8, fig.height=9, echo=FALSE, warning=FALSE}
+final <- ggarrange(a,b,c, legend, ncol = 1, nrow = 4)
+final
+```
+
+```{r, echo=FALSE}
+df4 <- read.csv('final_comparison_sultans.csv')
+df4 <- df4[!is.na(df4$Tenure), ]
+damascus <- df4 %>% filter(Country == 'Syria')
+egypt <- df4 %>% filter(Country == 'Egypt')
+algeria <- df4 %>% filter(Country == 'Algeria')
+damascus<- damascus[order(damascus$StartYear) , ]
+algeria<- algeria[order(algeria$StartYear) , ]
+egypt<- egypt[order(egypt$StartYear) , ]
+```
+
+```{r, echo=FALSE}
+tibble_df <- tibble(Name=df4$Name, StartYear=df4$StartYear, EndYear=df4$EndYear, Tenure=df4$Tenure, Country=df4$Country, 
+                    Fate=df4$Fate, Marriage=df4$Marriage, Ethnicity = df4$Ethnicity,
+                    Sultan = factor(df4$Sultan, levels = unique(df4$Sultan)))
+```
+
+```{r, echo=FALSE,message=FALSE, results='hide', warning=FALSE}
+mean_tenure_by_sultanv1 <- tibble_df %>% group_by(Sultan, Ethnicity) %>% summarise(
+  mean_gov_tenure = mean(Tenure)
+)
+mean_tenure_by_sultanv2 <- tibble_df %>% group_by(Sultan, Country) %>% summarise(
+  mean_gov_tenure = mean(Tenure)
+)
+```
+
+```{r, echo=FALSE}
+ggplot(mean_tenure_by_sultanv1, aes(fill=Ethnicity, y=mean_gov_tenure, x=Sultan)) + 
+    geom_bar(position="stack", stat="identity") +
+    #scale_fill_viridis(discrete = T) +
+    #ggtitle("Studying 4 species..") +
+    #theme_ipsum() + 
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+    #xlab("")
+```
+```{r, echo=FALSE}
+ggplot(mean_tenure_by_sultanv2, aes(fill=Country, y=mean_gov_tenure, x=Sultan)) + 
+    geom_bar(position="stack", stat="identity") +
+    #scale_fill_viridis(discrete = T) +
+    #ggtitle("Studying 4 species..") +
+    #theme_ipsum() + 
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+    #xlab("")
+```
+
+
+```{r, echo=FALSE, message=FALSE, results='hide', warning=FALSE}
+ethnicity_by_sultan <- tibble_df %>% group_by(Sultan, Ethnicity) %>% summarise(cnt = n()) %>% mutate(freq = formattable::percent(cnt / sum(cnt))) 
+```
+
+```{r, echo=FALSE}
+# Stacked + percent
+ggplot(ethnicity_by_sultan, aes(fill=Ethnicity, y=cnt, x=Sultan)) + 
+    geom_bar(position="fill", stat="identity") + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+
+color_table <- tibble(
+  Color = c('#A3A500',  '#F8766D', '#00BF7D', '#C77CFF')
+  )
+
+syria_graph<-ggplot(data=damascus[1:170,], aes(x=as.numeric(StartYear)+10, y=scale(Tenure), fill=Ethnicity)) +
+  geom_bar(stat="identity") + 
+  ylim(-2, 6)+
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Tenure')+
+  scale_fill_manual(values=color_table$Color)+
+  ggtitle("Z Scores of Governor Tenures in Syria") + 
+  theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+        text = element_text(size=14))+
+  theme(plot.title = element_text(size = 12, face = "bold"))
+```
+
+```{r, echo=FALSE, warning=FALSE}
+
+color_table <- tibble(
+  Color = c('#A3A500',  '#F8766D', '#00BF7D', '#C77CFF')
+  )
+
+algeria_graph<-ggplot(data=algeria[1:120,], aes(x=as.numeric(StartYear)+10, y=scale(Tenure), fill=Ethnicity)) +
+  geom_bar(stat="identity") + 
+  ylim(-2, 6)+
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Tenure')+
+  scale_fill_manual(values=color_table$Color)+
+  ggtitle("Z Scores of Governor Tenures in Algeria") + 
+  theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+        text = element_text(size=14)) +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+
+color_table <- tibble(
+  Color = c('#A3A500',  '#F8766D', '#00BF7D', '#C77CFF')
+  )
+
+egypt_graph<-ggplot(data=egypt[1:171,], aes(x=as.numeric(StartYear)+10, y=scale(Tenure), fill=Ethnicity)) +
+  geom_bar(stat="identity") + 
+  ylim(-2, 6)+
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 12)) +
+  xlab('Year') +
+  ylab('Tenure')+
+  scale_fill_manual(values=color_table$Color)+
+  ggtitle("Z Scores of Governor Tenures in Egypt") + 
+  theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+        text = element_text(size=14))+
+  theme(plot.title = element_text(size = 12, face = "bold"))
+```
+
+```{r,fig.width=8, fig.height=7, echo=FALSE, warning=FALSE}
+final_bar <- ggarrange(syria_graph, algeria_graph, egypt_graph, ncol = 1, nrow=3, common.legend=TRUE)
+#final_bar
+```
+
+```{r, echo=FALSE}
+full_dataset <- read.csv('final_comparison_sultans.csv')
+full_dataset$index <- 1:nrow(full_dataset)
+full_dataset <- full_dataset[!is.na(full_dataset$Tenure), ]
+full_dataset['Scaled_Tenure'] = scale(full_dataset$Tenure)
+
+syria <- full_dataset %>% filter(Country == 'Syria')
+algeria <- full_dataset %>% filter(Country == 'Algeria')
+egypt <- full_dataset %>% filter(Country == 'Egypt')
+suleiman <- full_dataset %>% filter(StartYear >= 1520 & StartYear <= 1566)
+non_suleiman <- full_dataset[-suleiman$index,]
+```
+
+```{r, echo=FALSE}
+library(nortest)
+ad.test(full_dataset$Tenure)
+ad.test(syria$Tenure)
+ad.test(algeria$Tenure)
+ad.test(egypt$Tenure)
+```
+
+```{r, echo=FALSE}
+library(corrplot)
+kruskal.test(Tenure ~ Country, data=full_dataset)
+pairwise.wilcox.test(full_dataset$Tenure, full_dataset$Country,
+                     p.adjust.method = "BH", exact=FALSE)
+
+```
+```{r, echo=FALSE}
+kruskal.test(Tenure ~ Sultan, data=full_dataset)
+kruskal.test(Tenure ~ Sultan, data=syria)
+kruskal.test(Tenure ~ Sultan, data=algeria)
+kruskal.test(Tenure ~ Sultan, data=egypt)
+```
+
+
+
+```{r, fig.height=7, echo=FALSE}
+full <- pairwise.wilcox.test(full_dataset$Tenure, full_dataset$Sultan,
+                 p.adjust.method = "BH", exact=FALSE)
+my_transformed_pvals=-log10(full$p.value)
+# corrplot(as.matrix(my_transformed_pvals),is.corr=F,type = "lower", tl.col = "black")
+
+corrplot(as.matrix(my_transformed_pvals), type = "lower", 
+         tl.col = "black", tl.srt = 45, is.corr=F, title = 'Governor Tenure vs. Sultan (Full Dataset)', mar=c(0,0,1,0))
+```
+
+```{r, fig.height=7, echo=FALSE}
+syria_corr <- pairwise.wilcox.test(syria$Tenure, syria$Sultan,
+                 p.adjust.method = "BH", exact=FALSE)
+my_transformed_pvals=-log10(syria_corr$p.value)
+# corrplot(as.matrix(my_transformed_pvals),is.corr=F,type = "lower", tl.col = "black")
+
+corrplot(as.matrix(my_transformed_pvals), type = "lower", 
+         tl.col = "black", tl.srt = 45, is.corr=F, title = 'Governor Tenure vs. Sultan (Syria)', mar=c(0,0,1,0))
+```
+
+```{r, fig.height=7.25, echo=FALSE}
+egypt_corr <- pairwise.wilcox.test(egypt$Tenure, egypt$Sultan,
+                 p.adjust.method = "BH", exact=FALSE)
+my_transformed_pvals=-log10(egypt_corr$p.value)
+# corrplot(as.matrix(my_transformed_pvals),is.corr=F,type = "lower", tl.col = "black")
+
+corrplot(as.matrix(my_transformed_pvals), type = "lower", 
+         tl.col = "black", tl.srt = 45, is.corr=F, title = 'Governor Tenure vs. Sultan (Egypt)', mar=c(0,0,1,0))
+```
+
+```{r, fig.height=7.25, echo=FALSE}
+algeria_corr <- pairwise.wilcox.test(algeria$Tenure, algeria$Sultan,
+                 p.adjust.method = "BH", exact=FALSE)
+my_transformed_pvals=-log10(algeria_corr$p.value)
+# corrplot(as.matrix(my_transformed_pvals),is.corr=F,type = "lower", tl.col = "black")
+
+corrplot(as.matrix(my_transformed_pvals), type = "lower", 
+         tl.col = "black", tl.srt = 45, is.corr=F, title = 'Governor Tenure vs. Sultan (Algeria)', mar=c(0,0,1,0))
+```
+
+
+```{r,echo=FALSE}
+damascus_data <- read.csv('Damascus-OttomanGovernors - Governors.csv', stringsAsFactors=T)
+subsetA <- damascus_data[-which(damascus_data$Simplest_Fate == ""), ]
+subsetA <- subsetA[!is.na(subsetA$Simplest_Fate), ]
+subsetA <- subsetA[-which(subsetA$Simplest_Fate == "Unknown"), ]
+
+
+library(dplyr)
+subsetA <- subsetA %>%
+  rename(Ethnicity = O.T.NT)
+
+subsetA <- subsetA %>% select(-c(Fate)) %>%
+  rename(Fate = Simplest_Fate)
+
+subsetA <- subsetA[-which(subsetA$Ethnicity == ""), ]
+subsetA <- subsetA[!is.na(subsetA$Ethnicity), ]
+subsetA <- subsetA[-which(subsetA$Ethnicity == "Unknown"), ]
+subsetA$Fate <- as.factor(as.character(subsetA$Fate))
+subsetA$Ethnicity <- as.factor(as.character(subsetA$Ethnicity))
+```
+
+```{r,echo=FALSE, fig.height = 8, fig.width=11}
+ggplot(data = subsetA) + geom_mosaic(aes(x = product(Ethnicity), fill = Fate),offset = 0.02) + 
+  labs(title = "Fate vs. Ethnicity") + theme(text = element_text(size = 19))
+```
+
+```{r, echo=FALSE}
+fate_vs_ethnicity <- as.data.frame.matrix(table(subsetA$Fate,subsetA$Ethnicity))
+fate_vs_ethnicity %>% kbl() %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+fisher.test(fate_vs_ethnicity)
+```
+
+```{r,echo=FALSE}
+ggplot(subsetA, aes(Ethnicity, ..count..)) + geom_bar(aes(fill = Fate), position = "dodge") + 
+  scale_fill_manual("legend", values = c("Killed in battle" = "#A3A500", "Non-violent fate" = "#00BF7D", 
+                                         "Willful violent removal" = "#F8766D")) + 
+  guides(fill=guide_legend(title="Governor Fate")) + 
+  theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+  theme(text = element_text(size=12))
+```
+
+
+```{r, echo=FALSE}
+df4 <- read.csv('final_comparison.csv')
+damascus_data <- df4 %>% filter(Country == 'Syria')
+damascus_data <- damascus_data[-which(damascus_data$Fate == "Unknown"), ]
+```
+
+```{r, echo=FALSE, fig.height = 8, fig.width=11}
+ggplot(data = damascus_data) + geom_mosaic(aes(x = product(Marriage), fill = Fate),offset = 0.02) + 
+  labs(title = "Fate vs. Marriage") + theme(text = element_text(size = 19))
+```
+
+```{r, echo=FALSE}
+fate_vs_marriage <- as.data.frame.matrix(table(damascus_data$Fate,damascus_data$Marriage))
+fate_vs_marriage %>% kbl() %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+fisher.test(fate_vs_marriage)
+```
+
+
+```{r, echo=FALSE}
+ggplot(damascus_data, aes(Marriage, ..count..)) + geom_bar(aes(fill = Fate), position = "dodge") + 
+    scale_fill_manual("legend", values = c("Killed in Battle" = "#A3A500",  "Non-violent Fate" = "#F8766D",
+                                           "Willful Violent Removal" = "#00BF7D")) + 
+    guides(fill=guide_legend(title="Governor Fate")) + 
+     theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    theme(text = element_text(size=12))
+```
+
+
+```{r,echo=FALSE}
+damascus_data <- df4 %>% filter(Country == 'Syria')
+damascus_data <- damascus_data[-which(damascus_data$Ethnicity == "Unknown"), ]
+```
+
+
+```{r, echo=FALSE, fig.height = 8, fig.width=11}
+ggplot(data = damascus_data) + geom_mosaic(aes(x = product(Marriage), fill = Ethnicity),offset = 0.02) + 
+  labs(title = "Ethnicity vs. Marriage") + theme(text = element_text(size = 19))
+```
+
+```{r, echo=FALSE}
+marriage_vs_ethnicity <- as.data.frame.matrix(table(damascus_data$Ethnicity,damascus_data$Marriage))
+marriage_vs_ethnicity %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+fisher.test(marriage_vs_ethnicity)
+```
+
+```{r,echo=FALSE}
+ggplot(damascus_data, aes(Marriage, ..count..)) + geom_bar(aes(fill = Ethnicity), position = "dodge") + 
+    scale_fill_manual("legend", values = c("Non-Turkish" = "#A3A500",
+                                         "Ottoman" = "#F8766D",
+                                          "Turkish" = "#00BF7D")) + 
+    guides(fill=guide_legend(title="Governor Ethnicity")) + 
+     theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    theme(text = element_text(size=12))
+```
+
+```{r, echo=FALSE}
+governors_with_positions <- read.csv('governors_with_position_labels.csv')
+subsetC <- governors_with_positions[!is.na(governors_with_positions$Simplest_Fate), ]
+subsetC <- subsetC[-which(subsetC$Simplest_Fate == "Unknown"), ]
+
+subsetC <- subsetC %>% select(-c(Fate)) %>%
+  rename(Fate = Simplest_Fate)
+
+subsetC <- subsetC %>% 
+  rename(Previous_Position = classification)
+
+subsetC <- subsetC[!is.na(subsetC$Previous_Position), ]
+```
+
+```{r, echo=FALSE, fig.height = 11, fig.width=16}
+ggplot(data = subsetC) + geom_mosaic(aes(x = product(Previous_Position), fill = Fate),offset = 0.02) + 
+  labs(title = "Fate vs. Previous Position") + theme(text = element_text(size = 23))
+```
+
+```{r, echo=FALSE}
+fate_vs_position <- as.data.frame.matrix(table(subsetC$Fate,subsetC$Previous_Position))
+fate_vs_position %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+fisher.test(fate_vs_position)
+```
+
+
+```{r, echo=FALSE}
+ggplot(subsetC, aes(Previous_Position, ..count..)) + geom_bar(aes(fill = Fate), position = "dodge") + 
+    scale_fill_manual("legend", values = c("Killed in battle" = "#A3A500",
+                                         "Non-violent fate" = "#00BF7D",
+                                          "Willful violent removal" = "#F8766D")) + 
+    guides(fill=guide_legend(title="Governor Fate")) + 
+    theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    theme(text = element_text(size=12))
+```
+
+```{r, echo=FALSE}
+subsetD <- governors_with_positions[!is.na(governors_with_positions$O.T.NT), ]
+subsetD <- subsetD[!is.na(subsetD$classification), ]
+subsetD <- subsetD[-which(subsetD$O.T.NT == "Unknown"), ]
+
+subsetD <- subsetD %>% 
+  rename(Ethnicity = O.T.NT)
+
+subsetD <- subsetD %>% 
+  rename(Previous_Position = classification)
+
+subsetD$Ethnicity <- as.factor(as.character(subsetD$Ethnicity))
+```
+
+
+```{r, echo=FALSE, fig.height = 11, fig.width=16}
+ggplot(data = subsetD) + geom_mosaic(aes(x = product(Previous_Position), fill = Ethnicity),offset = 0.02) + 
+  labs(title = "Ethnicity vs. Previous Position") + theme(text = element_text(size = 24))
+```
+
+```{r, echo=FALSE}
+position_vs_ethnicity <- as.data.frame.matrix(table(subsetD$Previous_Position,subsetD$Ethnicity))
+position_vs_ethnicity %>% kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+fisher.test(position_vs_ethnicity)
+```
+
+```{r, echo=FALSE}
+ggplot(subsetD, aes(Ethnicity, ..count..)) + geom_bar(aes(fill = Previous_Position), position = "dodge") + 
+    scale_fill_manual("legend", values = c("Military" = "#A3A500",
+                                         "Palace Roles" = "#00BF7D",
+                                          "Political/Administrative" = "#F8766D")) + 
+  theme(panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    guides(fill=guide_legend(title="Previous Position")) + 
+    theme(text = element_text(size=12)) 
+```
+
+
+```{r, echo=FALSE}
+knitr::include_graphics("suleiman_tenures.gif")
+```
+
+```{r, echo=FALSE}
+unique(suleiman$Fate)
+kruskal.test(Tenure ~ Fate, data=suleiman)
+```
+```{r, echo=FALSE}
+unique(non_suleiman$Fate)
+kruskal.test(Tenure ~ Fate, data=non_suleiman)
+```
+```{r, echo=FALSE}
+kruskal.test(Term ~ Country, data=full_dataset)
+
+pairwise.wilcox.test(full_dataset$Term, full_dataset$Country,
+                     p.adjust.method = "BH")
+```
+
+```{r, echo=FALSE}
+kruskal.test(Tenure ~ Marriage, data=full_dataset)
+```
