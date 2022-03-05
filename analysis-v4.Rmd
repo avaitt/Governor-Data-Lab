@@ -1,0 +1,368 @@
+---
+title: "\\vspace{-1cm} Report Draft"
+author: "Dara Tan"
+date: "3/1/2022"
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align = 'center', out.width = '85%')
+library(tidyverse)
+library(readxl)
+library(RColorBrewer)
+library(kableExtra)
+library(ggraph)
+library(igraph)
+
+df <- read_excel('governors-v3b.xlsx') %>%
+  group_by(governor_id) %>%
+  mutate(stage = order / max(order)) %>%
+  ungroup() %>%
+  select(-row)
+
+positions <- read_excel('positions.xlsx') %>%
+  select(position = 'Title/Position', classification = 'Classification')
+```
+
+## Introduction
+
+This analysis seeks to understand the paths taken by men through positions of power in the Ottoman Empire. To do so, the following information about the careers of 297 men, who governed in Egypt or Damascus at least once, was collected: their names, the positions they held, the order in which they held these positions and, in the case of governing positions, the territories in which the positions were located.
+
+## Part I: Positions
+
+To start, this analysis traces the chains of positions held by the 297 men of interest. In Visualization 1:
+
+- Positions are categorized by their nature into Military, Palace Roles or Political/Administrative.
+  + Palace Roles are notable positions which involved working in the Sultan's palace. Some positions labeled as Palace Roles include *bostanji*, who were metaphorically 'gardeners' but more literally executioners and *mirahur-i evvel*, who were chief stablemen.
+  + Positions are classified as Political/Administrative if they require a substantial amount of political and/or administrative expertise. This includes all governing positions, even those which require both political and military abilities such *beylerbey* or governor-generals, but other examples of roles in this category include *defterdar* or finance ministers, as well as *kadi* or judges.
+  + Roles are considered Military if they primarily require military skill, or are situated within military units. Some examples of Military roles include *kapudan pasha*, the grand admiral of the Ottoman navy, as well as *silahdar*, arms-bearers.
+  + The colors red, blue and green are used to correspond to the three types of positions, respectively.
+
+- `Career Stage` is a numeric variable ranging from 0 to 1, calculated as the ratio of the `Order` of the position in question and that of the last position held by the individual. For example, if an individual held five positions in total, one after another, then the `Career Stage` of his second position would be 0.4. This is meant to give an indication of how early or late in a career a position was held.
+
+- Each point represents a single position held by a man in the dataset. Points are intentionally made translucent, so that overlaps between points, i.e. when two positions of the same nature are held at similar stages in a career, are more apparent.
+
+```{r Position Type by Stage}
+df %>%
+  left_join(positions, by = 'position') %>%
+  ggplot() + geom_point(aes(stage, classification, color = classification),
+                        alpha = 0.3, show.legend = FALSE) +
+  scale_color_manual(values = brewer.pal(3, 'Set1')) +
+  labs(title = 'Visualization 1: Type of Position by Stage in Career',
+       x = 'Career Stage', y = 'Type of Position') +
+  theme_bw()
+```
+
+From Visualization 1, it appears that Palace Roles were held most frequently at the beginning of a governor's career. This makes sense, as serving in the palace allowed men to make valuable connections and establish themselves. Perhaps more surprising is the tendency for positions of Military nature to be held earlier in one's career. This could be due to younger men whose careers are just starting being more physically able to meet the demands of such positions, or because of a reluctance to send administrators who have mastered the necessary skills for governing over the course of long political careers into the line of fire.
+
+Taking a closer look at the specific positions that were most commonly held by the men in the dataset at different stages of their career, positions were classified as being held in the Early, Middle and Late phases of one's career based on the associated `Career Stage` values. 0.4 and 0.8 were chosen as the upper limits for Early and Middle phase roles respectively as they were the 30th and 70th percentile values of the `Career Stage` variable in the dataset. The frequency with which each position was held in each of the three phases described above was calculated and the 10 positions with the highest counts in each phase are shown in Table 1, with the same color scheme from Visualization 1 being applied.
+
+```{r Top Positions by Stage}
+  # 30th, 70th and 100th percentile: 0.4, 0.8 and 1
+get_top_positions <- function(stage_label, stage_minimum, stage_maximum) {
+  output <- df %>%
+    filter(stage > stage_minimum & stage <= stage_maximum) %>%
+    count(position) %>%
+    slice_max(order_by = n, n = 10) %>%
+    mutate(rank = row_number(), stage_label = stage_label) %>%
+    select(-n)
+}
+early <- get_top_positions('Early', 0, 0.4)
+middle <- get_top_positions('Middle', 0.4, 0.8)
+late <- get_top_positions('Late', 0.8, 1)
+
+top_positions <- bind_rows(early, middle, late) %>%
+  left_join(positions, by = 'position') %>%
+  left_join(tibble(classification = c('Military', 'Palace Roles',
+                                      'Political/Administrative'),
+                   color = brewer.pal(3, 'Pastel1')), by = 'classification') 
+  # positions are tied; have the same classification
+top_positions$position[30] <- 'Civil Servant/Kaymakam' 
+top_positions <- top_positions[-31, ]
+
+top_positions %>%
+  select(position, Rank = rank, stage_label) %>%
+  pivot_wider(names_from = stage_label, values_from = position) %>%
+  mutate(Early = cell_spec(Early, background = top_positions$color[1:10]),
+         Middle = cell_spec(Middle, background = top_positions$color[11:20]),
+         Late = cell_spec(Late, background = top_positions$color[21:30])) %>%
+  kable(caption = '10 Most Common Positions by Stage in Career',
+        escape = FALSE) %>%
+  kable_styling(latex_options = 'hold_position', full_width = FALSE)
+```
+
+\newpage
+
+From Table 1, some notable observations include:
+
+- Janissary and Janissary *agha* (chief) positions were common in the Early stage of one's career. This affirms the depiction of the Janissary corps as a means of moving up the ranks for non-Turkish men. Moreover, this might have contributed to the trend observed in Visualization 1, where Military positions tended to be held towards the beginning of one's path through positions of power in the Empire.
+
+- *Kapicibasi* was the sole Palace Role to be featured in Table 1. Commonly translated as 'palace gatekeeper', this "significant and coveted" position was sometimes granted to the *ayan*, or local notables, as an "honorary" title, in acknowledgement of their "growing importance" (Kunt).
+
+- *Amir Al-hajj*, translated as 'commander of the pilgrimage', was a position bestowed upon individuals primarily in the Middle and Late phases of their career. This was an "extremely important" office, which "brought with it great political influence and religious prestige" (Wikipedia). Given the importance of this office, it is plausible that individuals had to prove their worth in the Early phase of their career, before being granted this privilege in the later phases.
+
+## Part II: Territories
+
+The second part of this analysis seeks to trace the territories over which the 297 men of interest governed. 
+
+- Positions with these 14 titles were considered 'governing positions': *bey* (governor), *beylerbey*, district governor, governor, imposter sultan, independent ruler, *kaymakam* (governor of a provincial district), *mirmiran* (the ruler of an *eyalet*, which can be thought of as a province; similar to *beylerbey*), *pasha* (rank typically granted to governors), *sanjak-bey* (title given to a *bey* appointed to the military and administrative command of a district), *serdar* (leader), sultan, viceroy and *wali* (administrative title used to designate governors of administrative divisions). The territories discussed here were those in which the 297 men held these positions.
+
+- 12 territories were excluded from the analysis because they could not be identified: Bayezid, Cedar, Hamedan, Inguis, Kengiri, Maarra, Recebin, Shaban, Shain, Sharr, Tirnova and Zilnik.
+
+This analysis was approached by constructing a network from the chains of territories governed by the men in the dataset, in which the territories were represented by nodes and the movements by the governors from territory to territory were represented by directed edges.
+
+### Network Graph
+
+The graph in Visualization 2 gives an idea of the resulting network. In the graph, arrowheads are used to show the direction of a governor's movement. Furthermore, edges are color-coded to indicate whether a move was a demotion, a lateral move, or a promotion. This is determined by comparing the classification of the territory from which the governor left, to that of the territory in which the governor arrived.
+
+To do so, territories are sorted in the following order: *beylik* or *eyalet* (province) > *vilayet* (administrative division) > *sanjak* (district) > *kaza* (sub-district) > fortress. In addition, *eyalets* are sorted by precedence, with Egypt having the highest precedence, followed by Baghdad, Abyssinia, Buda, Anatolia, Marash and the rest. While some names are ambiguous (for instance, an *eyalet* may be named after the capital *vilayet*), in each case, the highest level territory is assumed. 
+
+```{r Network Preparation}
+governorships <- c('Bey', 'Beylerbey', 'District Governor', 'Governor',
+                   'Imposter Sultan', 'Independent Ruler', 'Kaymakam',
+                   'Mirmiran', 'Pasha', 'Sanjak-bey', 'Serdar', 'Sultan',
+                   'Viceroy', 'Wali')
+
+standardization <- read_excel('territories.xlsx', sheet = 'standardization')
+classification <- read_excel('territories.xlsx', sheet = 'classification')
+eyalets <- read_excel('territories.xlsx', sheet = 'eyalets')
+hierarchy <- tribble(
+    ~ rank_name, ~ rank_score,
+    'Eyalet E1', 1,
+    'Eyalet E2', 2,
+    'Eyalet E3', 3,
+    'Eyalet E4', 4,
+    'Eyalet E5', 5,
+    'Eyalet E6', 6,
+    'Eyalet E7', 7,
+    'Beylik', 7,
+    'Vilayet', 8,
+    'Sanjak', 9,
+    'Kaza', 10,
+    'Fortress', 11
+  )
+
+territories0 <- df %>%
+  filter(position %in% governorships) %>%
+  left_join(standardization, by = c('territory' = 'Original')) %>%
+    # can't have undefined nodes
+  filter(!is.na(Standardized)) %>%
+  select(governor_id, order, territory = Standardized) %>%
+  arrange(governor_id, order)
+
+get_territory_pairs <- function(governor) {
+  governor_territories <- territories0 %>%
+    filter(governor_id == governor)
+  governor_orders <- unique(governor_territories$order)
+  
+  governor_output <- tibble()
+  for (i in seq_len(nrow(governor_territories) - 1)) {
+    for (j in seq(from = i + 1, to = nrow(governor_territories))) {
+      if ((governor_territories$order[j] > governor_territories$order[i]) &&
+          (which(governor_orders == governor_territories$order[j]) ==
+           which(governor_orders == governor_territories$order[i]) + 1)) {
+        governor_output <- governor_output %>%
+          bind_rows(tibble(governor_id = governor_territories$governor_id[i],
+                           from_territory = governor_territories$territory[i],
+                           from_order = governor_territories$order[i],
+                           to_territory = governor_territories$territory[j],
+                           to_order = governor_territories$order[j]))
+      }
+    }
+  }
+  
+  return(governor_output)
+}
+
+territories1 <- map_df(unique(territories0$governor_id),
+                       get_territory_pairs) %>%
+  mutate(position_gap = to_order - from_order) %>%
+  select(governor_id, from_territory, to_territory, position_gap)
+
+territories2 <- territories1 %>%
+  left_join(classification %>%
+              select(-Link), by = c('from_territory' = 'Name')) %>%
+  rename(from_type = Type) %>%
+  left_join(classification %>%
+              select(-Link), by = c('to_territory' = 'Name')) %>%
+  rename(to_type = Type) %>%
+  left_join(eyalets, by = c('from_territory' = 'Name')) %>%
+  rename(from_precedence = Precedence) %>%
+  left_join(eyalets, by = c('to_territory' = 'Name')) %>%
+  rename(to_precedence = Precedence) %>%
+  mutate(from_rank =
+           ifelse(!is.na(from_precedence),
+                  str_c(from_type, ' ', from_precedence),
+                  ifelse(from_type == 'Eyalet', 'Eyalet E7', from_type)),
+         to_rank =
+           ifelse(!is.na(to_precedence),
+                  str_c(to_type, ' ', to_precedence),
+                  ifelse(to_type == 'Eyalet', 'Eyalet E7', to_type))) %>%
+  left_join(hierarchy, by = c('from_rank' = 'rank_name')) %>%
+  rename(from_score = rank_score) %>%
+  left_join(hierarchy, by = c('to_rank' = 'rank_name')) %>%
+  rename(to_score = rank_score) %>%
+  mutate(change = to_score - from_score,
+          # a higher score is a less desirable territory
+         weight = ifelse(change < 0, 1, ifelse(change == 0, 0, -1))) %>%
+  select(governor_id, from_territory, to_territory, weight)
+```
+
+```{r Network Visualization}
+set.seed(1)
+territories2 %>%
+  select(-governor_id) %>%
+  filter(!is.na(weight)) %>%
+  mutate(weight = as.character(weight)) %>%
+  graph_from_data_frame(directed = TRUE) %>%
+  ggraph(layout = 'gem') +
+  geom_node_label(aes(label = name), size = 3) +
+  geom_edge_link(aes(edge_color = weight),
+                 arrow = arrow(length = unit(3, 'mm'))) +
+  scale_edge_color_manual(values = brewer.pal(3, 'Set1'), name = 'Movement Type',
+                          labels = c('Demotion', 'Lateral', 'Promotion')) +
+  labs(title = 'Governorship Positions: Movements Across Territories') +
+  theme(panel.background = element_rect(fill = 'white'),
+        legend.key = element_rect(fill = 'white'))
+```
+
+### Betweenness Centrality
+
+In graph theory, the betweenness centrality of a node is the number of 'shortest paths' that pass through it (Wikpedia). Nodes with high betweenness centrality values often serve as bridges between one part of a network and another. To better understand the paths which governors frequently took through territories in the Empire, as illustrated in Visualization 2 above, betweenness centrality scores were calculated for the network described above in three ways:
+
+1. **Unweighted:** Each edge was assumed to represent the same 'distance' when calculating the lengths of each path between two nodes.
+
+2. **Position Gap:** Edges were weighted by the `Position Gap`, or the difference in the `Order` values associated with the two governing positions. Since the men in the dataset also held non-governing positions and may have done so between governing positions, the `Position Gap` corresponding to each edge need not be 1. For instance, if a man held the following positions over the course of his career: governor of Aleppo, vizier and governor of Egypt, then the `Position Gap` associated with this edge between Aleppo and Egypt would be 2.
+
+3. **Geographical Distance:** Edges were weighted by the `Geographical Distance` between the territories. These distances were calculated by first obtaining the latitudes and longitudes of all the territories in the dataset from Google, then using the Haversine formula to calculate the distances between them, in kilometers. To comply with the requirement for positive weights in the calculation of betweenness centrality, 1 was added to each of these distances: some governors left a territory, only to return to the same one, with no governing positions in-between; hypothetical career progressions that illustrate this include `Governor of Aleppo > Vizier > Governor of Aleppo` and `Governor of Sidon (1517) > No Position (1518-1519) > Governor of Sidon (1520)`.
+
+\newpage
+
+Table 2 shows the 10 territories with the highest betweenness centrality scores, as calculated by each of the three methods described above.
+
+```{r Betweenness Preparation}
+  # add in distance calculations
+distances <- read_excel('distances.xlsx')
+names(distances) <- c('territory', 'latitude', 'longitude')
+
+distance_by_coordinates <- function(from_lat, from_long, to_lat, to_long) {
+  p <- pi / 180
+  a <- 0.5 - cos((to_lat - from_lat) * p) / 2 + cos(from_lat * p) *
+    cos(to_lat * p) * (1 - cos((to_long - from_long) * p)) / 2
+  return(12742 * asin(sqrt(a)))
+}
+
+territories3 <- territories1 %>%
+  left_join(distances, by = c('from_territory' = 'territory')) %>%
+  rename(from_latitude = latitude, from_longitude = longitude) %>%
+  left_join(distances, by = c('to_territory' = 'territory')) %>%
+  rename(to_latitude = latitude, to_longitude = longitude) %>%
+    # +1 because some from-to pairs have the same location; need positive value
+  mutate(distance = distance_by_coordinates(from_latitude, from_longitude,
+                                            to_latitude, to_longitude) + 1) %>%
+  select(governor_id, from_territory, to_territory, position_gap, distance)
+```
+
+```{r Betweenness Calculation}
+unweighted0 <- territories3 %>%
+  select(from = from_territory, to = to_territory) %>%
+  graph_from_data_frame() %>%
+  betweenness(directed = TRUE)
+unweighted1 <- tibble(territory = names(unweighted0),
+                      score = unname(unweighted0), by = 'Unweighted')
+
+pg0 <- territories3 %>%
+  select(from = from_territory, to = to_territory, weight = position_gap) %>%
+  graph_from_data_frame() %>%
+  betweenness(directed = TRUE)
+pg1 <- tibble(territory = names(pg0), score = unname(pg0), by = 'Position Gap')
+
+distance0 <- territories3 %>%
+  select(from = from_territory, to = to_territory, weight = distance) %>%
+    # NA weights cause fatal errors
+  filter(!is.na(weight)) %>%
+  graph_from_data_frame() %>%
+  betweenness(directed = TRUE)
+distance1 <- tibble(territory = names(distance0), score = unname(distance0),
+                    by = 'Geographical Distance')
+
+top_betweenness <- bind_rows(unweighted1, pg1, distance1) %>%
+  group_by(by) %>%
+  slice_max(order_by = score, n = 10) %>%
+  mutate(rank = row_number()) %>%
+  select(rank, territory, by) %>%
+  ungroup()
+```
+
+```{r Top Betweenness}
+top_betweenness %>%
+  pivot_wider(names_from = by, values_from = territory) %>%
+  select(Rank = rank, Unweighted, 'Position Gap', 'Geographical Distance') %>%
+  kable(caption = 'Top 10 Territories by Betweenness Scores',
+        booktabs = TRUE, linesep = '') %>%
+  kable_styling(latex_options = 'hold_position', full_width = FALSE)
+```
+
+Moreover, Table 3 shows the eight territories which recurred in the 10 territories with the highest betweenness centrality scores, as obtained using all three calculation methods. Territories are sorted by the average of the rankings obtained:
+
+```{r Recurring Betweenness}
+recurring <- top_betweenness %>% 
+  group_by(territory) %>%
+  summarize(appearances = n(), mean_rank = mean(rank), .groups = 'drop') %>%
+  filter(appearances == 3)
+top_betweenness %>%
+  pivot_wider(names_from = by, values_from = rank) %>%
+  right_join(recurring, by = 'territory') %>%
+  arrange(mean_rank) %>%
+  select(Territory = territory, Unweighted, 'Position Gap',
+         'Geographical Distance', 'Average Rank' = mean_rank) %>%
+  kable(caption = 'Ranks of Recurrent Territories Across Calculation Methods',
+        digits = 1, booktabs = TRUE, linesep = '') %>%
+  kable_styling(latex_options = 'hold_position', full_width = FALSE)
+```
+
+Note that all except for Jerusalem, which was a *sanjak* and had the lowest average ranking, each of the recurrent territories was an *eyalet*. Furthermore, among the recurrent territories:
+
+- Damascus and Egypt ranked highly on all three calculation methods and had the highest average rankings of 1.3 and 2 respectively. This is unsurprising, given that men were included in the dataset on the basis of having held governing positions in at least one of these territories.
+
+- Aside from Damascus and Egypt, Aleppo ranked the most highly and most consistently across the three methods, having the second highest betweenness centrality score using the Geographical Distance method and the third highest betweenness centrality score using the other two methods. This might be attributed to Aleppo's location in Syria: it enjoyed geographical proximity to Damascus; the demands and challenges of governing positions in Aleppo were likely also similar to those in Damascus.
+
+- Anatolia and Rumelia were featured and each scored relatively highly on one calculation method: Anatolia placed fourth on the Unweighted scores, while Rumelia placed fourth on the scores weighted by Geographical Distance. As the two core provinces in the early years of the Ottoman Empire (Wikipedia), these were likely desirable territories that could serve as stepping stones to, or progressions from, the similarly desirable territories of Damascus and Egypt. Additionally, it has been argued that the rise of the Ottoman Egyptian elite mirrored that of local power groups in Anatolia and Rumelia, with changes in the system of surplus allocation playing a key role in each case (Piterberg). Perhaps this similarity primed men with governing experience in Egypt for similar governing roles in Anatolia and Rumelia, thereby explaining the high betweenness centrality scores obtained by these two territories.
+
+- As an *eyalet*, Sidon was created out of, and continued to be subordinated in some fiscal and political matters to, the Damascus *eyalet*, even after it was established. Furthermore, in the 19th century, the Sidon *eyalet* shared a border with Egypt (Wikipedia). Together, these facts might explain Sidon's high betweenness centrality scores.
+
+```{r Recurring Territories by Stage}
+df %>%
+  filter(position %in% governorships & territory %in% recurring$territory) %>%
+  ggplot() + geom_point(aes(stage, territory, color = territory),
+                        alpha = 0.7, show.legend = FALSE) +
+  scale_color_manual(values = brewer.pal(9, 'Set1')[-6]) +
+  labs(title = 'Visualization 3: Governorship Territory by Stage in Career',
+       subtitle = 'Limited to Recurrent Territories by Betweenness Scores',
+       x = 'Career Stage', y = 'Governorship Territory') +
+  theme_bw()
+```
+
+Taking a closer look at the recurrent territories determined above, Visualization 3 shows the career stages at which governing positions in these territories were held. Observe that men in the dataset tended to hold governing positions in Damascus and Egypt towards the end of their careers.
+
+In the case of Egypt, this might be due to the high precedence ascribed to the territory: at official functions, Egypt was the *eyalet* with the highest precedence (Wikipedia).
+
+As for Damascus, governing positions often were held in conjunction with the *Amir Al-hajj* position. As illustrated previously, this was a position that tended to be bestowed upon individuals in later stages of their career; to govern in Damascus and command the pilgrimage, individuals likely had to have already garnered experience through other less prominent positions earlier in their careers.
+
+## References
+
+- İ. Metin Kunt. “Devolution from the Centre to the Periphery: An Overview of Ottoman Provincial Administration.” Devolution from the Centre to the Periphery: An Overview of Ottoman Provincial Administration Chapter Author(s): İ. Metin Kunt Book Title: The Dynastic Centre and the Provinces Book Subtitle: Agents and Interactions, edited by Jeroen Duindam and Sabine Dabringhaus, pp. 30–48, https://doi.org/10.1163/j.ctt1w8h2x3.8.
+
+- https://en.wikipedia.org/wiki/Amir_al-hajj
+
+- https://en.wikipedia.org/wiki/Betweenness_centrality
+
+- https://en.wikipedia.org/wiki/Haversine_formula
+
+- https://en.wikipedia.org/wiki/Anatolia_Eyalet
+
+- https://en.wikipedia.org/wiki/Sidon_Eyalet
+
+- Piterberg, Gabriel. “The Formation of an Ottoman Egyptian Elite in the 18th Century.” International Journal of Middle East Studies, vol. 22, no. 3, 1990, pp. 275–289, doi:10.1017/S0020743800034073.
+
+- https://en.wikipedia.org/wiki/Eyalet
